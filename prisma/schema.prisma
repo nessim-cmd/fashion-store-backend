@@ -1,0 +1,215 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL" )
+}
+
+model User {
+  id            String    @id @default(uuid())
+  name          String
+  email         String    @unique
+  password      String
+  isAdmin       Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  orders        Order[]
+  wishlistItems WishlistItem[]
+  cartItems     CartItem[]
+}
+
+model Category {
+  id            String        @id @default(uuid())
+  name          String
+  description   String?
+  image         String?
+  slug          String        @unique
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  products      Product[]
+  subcategories Subcategory[]
+}
+
+model Subcategory {
+  id               String            @id @default(uuid())
+  name             String
+  description      String?
+  slug             String            @unique
+  categoryId       String
+  category         Category          @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  products         Product[]
+  subSubcategories SubSubcategory[]
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+}
+
+model SubSubcategory {
+  id           String      @id @default(uuid())
+  name         String
+  slug         String      @unique
+  subcategoryId String
+  subcategory  Subcategory @relation(fields: [subcategoryId], references: [id], onDelete: Cascade)
+  products     Product[]
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+}
+
+model Product {
+  id              String           @id @default(uuid())
+  name            String
+  description     String
+  price           Float
+  salePrice       Float?
+  images          String[]
+  categoryId      String
+  category        Category         @relation(fields: [categoryId], references: [id])
+  subcategoryId   String?
+  subcategory     Subcategory?     @relation(fields: [subcategoryId], references: [id])
+  subSubcategoryId String?
+  subSubcategory  SubSubcategory?  @relation(fields: [subSubcategoryId], references: [id])
+  featured        Boolean          @default(false)
+  inStock         Boolean          @default(true)
+  rating          Float            @default(0)
+  reviewCount     Int              @default(0)
+  slug            String           @unique
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  orderItems      OrderItem[]
+  cartItems       CartItem[]
+  wishlistItems   WishlistItem[]
+  productSizes    ProductSize[]
+  productColors   ProductColor[]
+}
+
+model ProductSize {
+  id        String   @id @default(uuid())
+  size      String
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([productId, size])
+}
+
+model ProductColor {
+  id        String   @id @default(uuid())
+  name      String
+  hex       String
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([productId, name])
+}
+
+model CartItem {
+  id            String        @id @default(uuid())
+  userId        String
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId     String
+  product       Product       @relation(fields: [productId], references: [id])
+  quantity      Int
+  selectedSize  String?
+  selectedColor Json?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@unique([userId, productId, selectedSize, selectedColor])
+}
+
+model WishlistItem {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, productId])
+}
+
+model Order {
+  id              String     @id @default(uuid())
+  userId          String
+  user            User       @relation(fields: [userId], references: [id])
+  status          OrderStatus @default(PENDING)
+  total           Float
+  shippingAddress Json
+  paymentMethod   String
+  couponId        String?
+  coupon          Coupon?    @relation(fields: [couponId], references: [id])
+  items           OrderItem[]
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+}
+
+model OrderItem {
+  id        String   @id @default(uuid())
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id])
+  quantity  Int
+  price     Float
+  size      String?
+  color     Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Coupon {
+  id          String   @id @default(uuid())
+  code        String   @unique
+  discount    Float
+  type        CouponType
+  minPurchase Float?
+  expiresAt   DateTime
+  isActive    Boolean  @default(true)
+  orders      Order[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Banner {
+  id        String   @id @default(uuid())
+  title     String
+  subtitle  String?
+  imageUrl  String
+  linkUrl   String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model SpecialOffer {
+  id          String   @id @default(uuid())
+  value       String
+  title       String
+  description String
+  buttonText  String?
+  linkUrl     String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+enum OrderStatus {
+  PENDING
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+enum CouponType {
+  PERCENTAGE
+  FIXED
+}
