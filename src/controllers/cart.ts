@@ -1,6 +1,7 @@
 // src/controllers/cart.ts
 import { Request, Response } from 'express';
 import prisma from '../config/db';
+import { Prisma } from '@prisma/client'; // Added Prisma import
 import { AuthRequest } from '../middleware/auth';
 import { validationResult } from 'express-validator';
 
@@ -98,7 +99,7 @@ export const addToCart = async (req: AuthRequest, res: Response) => {
         userId,
         productId,
         selectedSize: selectedSize || null,
-        selectedColor: selectedColor ? JSON.stringify(selectedColor) : null
+        selectedColor: selectedColor ? selectedColor : Prisma.JsonNull
       }
     });
     
