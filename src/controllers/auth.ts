@@ -84,13 +84,15 @@ export const login = async (req: Request, res: Response) => {
     // Generate token
     const token = generateToken(user);
 
-    // Return user data (excluding password)
+    // Return user data (excluding password) nested under 'user' key
     res.json({
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      isAdmin: user.isAdmin,
-      token
+      token,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        isAdmin: user.isAdmin
+      }
     });
   } catch (error) {
     console.error('Login error:', error);

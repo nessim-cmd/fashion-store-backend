@@ -45,7 +45,7 @@ app.use('/api/wishlist', wishlistRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/coupons', couponRoutes);
 app.use('/api/banners', bannerRoutes);
-app.use("/api/specialOffers", specialOfferRoutes);
+app.use('/api/special-offers', specialOfferRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/attributes', attributeRoutes);
 
