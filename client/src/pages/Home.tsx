@@ -8,19 +8,19 @@ import { ArrowRight, Loader, Truck, ShieldCheck, RefreshCw, Star } from 'lucide-
 import { Link } from 'react-router-dom';
 
 export const Home = () => {
-  const { data: products, isLoading, error } = useQuery({
+  const { data: products = [], isLoading, error } = useQuery({
     queryKey: ['featured-products'],
     queryFn: async () => {
       const response = await api.get('/products?limit=8&featured=true'); 
-      return response.data.products;
+      return Array.isArray(response.data?.products) ? response.data.products : [];
     },
   });
 
-  const { data: categories } = useQuery({
+  const { data: categories = [] } = useQuery({
     queryKey: ['categories-home'],
     queryFn: async () => {
       const response = await api.get('/categories');
-      return response.data;
+      return Array.isArray(response.data) ? response.data : [];
     },
   });
 
@@ -75,7 +75,7 @@ export const Home = () => {
       </section>
 
       {/* Shop by Category */}
-      {categories && categories.length > 0 && (
+      {Array.isArray(categories) && categories.length > 0 && (
         <section className="py-16 md:py-24 px-4 md:px-12 lg:px-24">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-black uppercase tracking-tighter mb-4">Shop by Category</h2>
@@ -134,7 +134,7 @@ export const Home = () => {
             </div>
          ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-y-12 gap-x-8">
-               {products?.map((product: any) => (
+               {Array.isArray(products) && products.map((product: any) => (
                   <ProductCard key={product.id} product={product} />
                ))}
             </div>

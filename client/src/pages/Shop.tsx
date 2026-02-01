@@ -35,11 +35,11 @@ export const Shop = () => {
     },
   });
 
-  const { data: categories } = useQuery({
+  const { data: categories = [] } = useQuery({
     queryKey: ['categories'],
     queryFn: async () => {
       const res = await api.get('/categories');
-      return res.data;
+      return Array.isArray(res.data) ? res.data : [];
     }
   });
 
