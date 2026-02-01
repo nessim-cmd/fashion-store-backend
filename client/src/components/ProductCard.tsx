@@ -1,5 +1,5 @@
 // src/components/ProductCard.tsx
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import type { Product } from '../types';
 import { useCartStore } from '../store/useCartStore';
@@ -14,9 +14,10 @@ import { QuickViewModal } from './QuickViewModal';
 
 interface ProductCardProps {
   product: Product;
+  viewMode?: 'grid' | 'list';
 }
 
-export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
+export const ProductCard: React.FC<ProductCardProps> = ({ product, viewMode = 'grid' }) => {
   const addItem = useCartStore((state) => state.addItem);
   const { user } = useAuthStore();
   const formatPrice = useSettingsStore((s) => s.formatPrice);
@@ -24,6 +25,43 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const queryClient = useQueryClient();
   const [isHovered, setIsHovered] = useState(false);
   const [showQuickView, setShowQuickView] = useState(false);
+  
+  // Long press for mobile quick view
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isLongPress = useRef(false);
+
+  const handleTouchStart = () => {
+    isLongPress.current = false;
+    longPressTimer.current = setTimeout(() => {
+      isLongPress.current = true;
+      setShowQuickView(true);
+      // Vibrate if supported
+      if (navigator.vibrate) {
+        navigator.vibrate(50);
+      }
+    }, 500); // 500ms long press
+  };
+
+  const handleTouchEnd = () => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+    }
+  };
+
+  const handleTouchMove = () => {
+    // Cancel long press if user moves finger
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+    }
+  };
+
+  const handleClick = (e: React.MouseEvent) => {
+    // Prevent navigation if it was a long press
+    if (isLongPress.current) {
+      e.preventDefault();
+      isLongPress.current = false;
+    }
+  };
 
   const addToWishlistMutation = useMutation({
     mutationFn: async () => {
@@ -68,14 +106,89 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     setShowQuickView(true);
   };
 
+  // List view layout
+  if (viewMode === 'list') {
+    return (
+      <>
+        <div 
+          className="group flex gap-6 p-4 border border-gray-100 hover:border-gray-300 transition-colors cursor-pointer"
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+          onTouchMove={handleTouchMove}
+        >
+          <Link to={`/product/${product.id}`} onClick={handleClick} className="w-32 h-40 flex-shrink-0">
+            <img
+              src={product.images[0] || 'https://via.placeholder.com/400x600?text=No+Image'}
+              alt={product.name}
+              className="w-full h-full object-cover rounded-md"
+            />
+          </Link>
+          
+          <div className="flex-1 flex flex-col justify-between py-2">
+            <div>
+              <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">
+                {product.category?.name || 'Collection'}
+              </p>
+              <Link to={`/product/${product.id}`} onClick={handleClick}>
+                <h3 className="text-lg font-bold mb-2 hover:underline underline-offset-4">
+                  {product.name}
+                </h3>
+              </Link>
+              <p className="text-sm text-gray-500 line-clamp-2">
+                {product.description || 'Premium quality essentials designed for the modern lifestyle.'}
+              </p>
+            </div>
+            
+            <div className="flex items-center justify-between mt-4">
+              <span className="text-lg font-bold">{formatPrice(product.price)}</span>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleQuickView}
+                  className="w-10 h-10 border border-gray-200 flex items-center justify-center hover:border-black hover:bg-black hover:text-white transition-colors"
+                  title="Quick view"
+                >
+                  <Eye size={18} />
+                </button>
+                <button
+                  onClick={handleAddToWishlist}
+                  className="w-10 h-10 border border-gray-200 flex items-center justify-center hover:border-black hover:bg-black hover:text-white transition-colors"
+                  title="Add to wishlist"
+                >
+                  <Heart size={18} />
+                </button>
+                <button
+                  onClick={handleAddToCart}
+                  className="h-10 px-4 bg-black text-white text-sm font-bold uppercase tracking-wider hover:bg-gray-800 transition-colors flex items-center gap-2"
+                >
+                  <ShoppingBag size={16} />
+                  Add
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <QuickViewModal
+          product={product}
+          isOpen={showQuickView}
+          onClose={() => setShowQuickView(false)}
+        />
+      </>
+    );
+  }
+
+  // Grid view layout (default)
   return (
     <>
       <div 
         className="group relative cursor-pointer"
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+        onTouchMove={handleTouchMove}
       >
-        <Link to={`/product/${product.id}`} className="block">
+        <Link to={`/product/${product.id}`} onClick={handleClick} className="block">
           <div className="aspect-[3/4] w-full overflow-hidden rounded-md bg-gray-100 relative">
             {/* Image */}
             <img

@@ -113,16 +113,18 @@ export const Shop = () => {
                 {products.length} {products.length === 1 ? 'product' : 'products'}
               </span>
               
-              <div className="hidden md:flex items-center gap-2 border-l border-gray-200 pl-4">
+              <div className="flex items-center gap-2 border-l border-gray-200 pl-4">
                 <button 
                   onClick={() => setViewMode('grid')}
                   className={`p-2 ${viewMode === 'grid' ? 'text-black' : 'text-gray-400'}`}
+                  title="Grid view"
                 >
                   <Grid size={18} />
                 </button>
                 <button 
                   onClick={() => setViewMode('list')}
                   className={`p-2 ${viewMode === 'list' ? 'text-black' : 'text-gray-400'}`}
+                  title="List view"
                 >
                   <LayoutList size={18} />
                 </button>
@@ -217,13 +219,14 @@ export const Shop = () => {
               ) : (
                 <div className={
                   viewMode === 'grid' 
-                    ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-6 gap-y-10' 
-                    : 'space-y-6'
+                    ? 'grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-4 md:gap-x-6 gap-y-8 md:gap-y-10' 
+                    : 'space-y-4'
                 }>
                   {products.map((product: any) => (
                     <ProductCard 
                       key={product.id} 
-                      product={product} 
+                      product={product}
+                      viewMode={viewMode}
                     />
                   ))}
                 </div>
