@@ -6,15 +6,23 @@ import App from './App';
 import './index.css';
 import { useSettingsStore } from './store/useSettingsStore';
 import { ReloadPrompt } from './components/ReloadPrompt';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 // Settings initializer component
 const SettingsInitializer = ({ children }: { children: React.ReactNode }) => {
   const fetchSettings = useSettingsStore((s) => s.fetchSettings);
   
   useEffect(() => {
-    fetchSettings();
+    fetchSettings().catch(console.error);
   }, [fetchSettings]);
   
   return <>{children}</>;
@@ -22,13 +30,15 @@ const SettingsInitializer = ({ children }: { children: React.ReactNode }) => {
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <SettingsInitializer>
-          <App />
-          <ReloadPrompt />
-        </SettingsInitializer>
-      </BrowserRouter>
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <BrowserRouter>
+          <SettingsInitializer>
+            <App />
+            <ReloadPrompt />
+          </SettingsInitializer>
+        </BrowserRouter>
+      </QueryClientProvider>
+    </ErrorBoundary>
   </React.StrictMode>,
 );
