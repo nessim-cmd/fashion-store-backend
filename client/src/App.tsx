@@ -10,6 +10,7 @@ import { Checkout } from './pages/Checkout';
 import { Orders } from './pages/Orders';
 import { Profile } from './pages/Profile';
 import { Wishlist } from './pages/Wishlist';
+import { ScrollToTop } from './components/ScrollToTop';
 
 // Admin Imports
 import { AdminLayout } from './pages/admin/AdminLayout';
@@ -24,9 +25,11 @@ import { AdminNewsletter } from './pages/admin/AdminNewsletter';
 
 function App() {
   return (
-    <Routes>
-      {/* Public Routes */}
-      <Route path="/" element={<Home />} />
+    <>
+      <ScrollToTop />
+      <Routes>
+        {/* Public Routes */}
+        <Route path="/" element={<Home />} />
       <Route path="/shop" element={<Shop />} />
       <Route path="/products" element={<Shop />} />
       <Route path="/product/:id" element={<ProductDetail />} />
@@ -52,7 +55,8 @@ function App() {
       </Route>
 
       <Route path="*" element={<Home />} />
-    </Routes>
+      </Routes>
+    </>
   );
 }
 

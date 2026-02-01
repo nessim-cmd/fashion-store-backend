@@ -111,12 +111,13 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, viewMode = 'g
     return (
       <>
         <div 
-          className="group flex gap-6 p-4 border border-gray-100 hover:border-gray-300 transition-colors cursor-pointer"
+          className="group flex flex-col sm:flex-row gap-4 p-3 sm:p-4 border border-gray-100 hover:border-gray-300 transition-colors cursor-pointer rounded-lg"
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
           onTouchMove={handleTouchMove}
         >
-          <Link to={`/product/${product.id}`} onClick={handleClick} className="w-32 h-40 flex-shrink-0">
+          {/* Image - Full width on mobile, fixed width on desktop */}
+          <Link to={`/product/${product.id}`} onClick={handleClick} className="w-full sm:w-28 md:w-32 aspect-square sm:aspect-[3/4] flex-shrink-0">
             <img
               src={product.images[0] || 'https://via.placeholder.com/400x600?text=No+Image'}
               alt={product.name}
@@ -124,44 +125,45 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, viewMode = 'g
             />
           </Link>
           
-          <div className="flex-1 flex flex-col justify-between py-2">
+          <div className="flex-1 flex flex-col justify-between min-w-0">
             <div>
-              <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">
+              <p className="text-[10px] sm:text-xs text-gray-500 uppercase tracking-wider mb-1">
                 {product.category?.name || 'Collection'}
               </p>
               <Link to={`/product/${product.id}`} onClick={handleClick}>
-                <h3 className="text-lg font-bold mb-2 hover:underline underline-offset-4">
+                <h3 className="text-base sm:text-lg font-bold mb-1 sm:mb-2 hover:underline underline-offset-4 line-clamp-1">
                   {product.name}
                 </h3>
               </Link>
-              <p className="text-sm text-gray-500 line-clamp-2">
+              <p className="text-xs sm:text-sm text-gray-500 line-clamp-2 hidden sm:block">
                 {product.description || 'Premium quality essentials designed for the modern lifestyle.'}
               </p>
             </div>
             
-            <div className="flex items-center justify-between mt-4">
-              <span className="text-lg font-bold">{formatPrice(product.price)}</span>
-              <div className="flex gap-2">
+            {/* Price and Actions */}
+            <div className="flex items-center justify-between mt-3 sm:mt-4 gap-2">
+              <span className="text-base sm:text-lg font-bold">{formatPrice(product.price)}</span>
+              <div className="flex gap-1.5 sm:gap-2">
                 <button
                   onClick={handleQuickView}
-                  className="w-10 h-10 border border-gray-200 flex items-center justify-center hover:border-black hover:bg-black hover:text-white transition-colors"
+                  className="w-9 h-9 sm:w-10 sm:h-10 border border-gray-200 flex items-center justify-center hover:border-black hover:bg-black hover:text-white transition-colors rounded"
                   title="Quick view"
                 >
-                  <Eye size={18} />
+                  <Eye size={16} />
                 </button>
                 <button
                   onClick={handleAddToWishlist}
-                  className="w-10 h-10 border border-gray-200 flex items-center justify-center hover:border-black hover:bg-black hover:text-white transition-colors"
+                  className="w-9 h-9 sm:w-10 sm:h-10 border border-gray-200 flex items-center justify-center hover:border-black hover:bg-black hover:text-white transition-colors rounded"
                   title="Add to wishlist"
                 >
-                  <Heart size={18} />
+                  <Heart size={16} />
                 </button>
                 <button
                   onClick={handleAddToCart}
-                  className="h-10 px-4 bg-black text-white text-sm font-bold uppercase tracking-wider hover:bg-gray-800 transition-colors flex items-center gap-2"
+                  className="h-9 sm:h-10 px-3 sm:px-4 bg-black text-white text-xs sm:text-sm font-bold uppercase tracking-wider hover:bg-gray-800 transition-colors flex items-center gap-1.5 rounded"
                 >
-                  <ShoppingBag size={16} />
-                  Add
+                  <ShoppingBag size={14} />
+                  <span className="hidden xs:inline">Add</span>
                 </button>
               </div>
             </div>
