@@ -1,15 +1,53 @@
 
-import { useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../api/client';
-import { Loader, Users, Mail, Calendar, ShieldCheck, ShoppingBag } from 'lucide-react';
+import { Loader, Users, Mail, Calendar, ShieldCheck, ShoppingBag, Trash2, MoreVertical, Shield } from 'lucide-react';
 import { Badge } from '../../components/ui/Badge';
+import { Button } from '../../components/ui/Button';
+import toast from 'react-hot-toast';
 
 export const AdminCustomers = () => {
+  const queryClient = useQueryClient();
+  const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showRoleModal, setShowRoleModal] = useState(false);
+  const [menuOpen, setMenuOpen] = useState<string | null>(null);
+
   const { data: customersData, isLoading, error } = useQuery({
     queryKey: ['admin-customers'],
     queryFn: async () => {
       const res = await api.get('/users?limit=100');
       return res.data;
+    }
+  });
+
+  // Delete user mutation
+  const deleteMutation = useMutation({
+    mutationFn: (userId: string) => api.delete(`/users/${userId}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-customers'] });
+      toast.success('User deleted successfully');
+      setShowDeleteModal(false);
+      setSelectedUser(null);
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Failed to delete user');
+    }
+  });
+
+  // Update role mutation
+  const updateRoleMutation = useMutation({
+    mutationFn: ({ userId, isAdmin }: { userId: string; isAdmin: boolean }) => 
+      api.put(`/users/${userId}`, { isAdmin }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-customers'] });
+      toast.success('User role updated successfully');
+      setShowRoleModal(false);
+      setSelectedUser(null);
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Failed to update user role');
     }
   });
 
@@ -61,6 +99,7 @@ export const AdminCustomers = () => {
                 <th className="p-4 hidden lg:table-cell">Joined</th>
                 <th className="p-4 hidden md:table-cell">Orders</th>
                 <th className="p-4">Role</th>
+                <th className="p-4 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -105,10 +144,113 @@ export const AdminCustomers = () => {
                       <Badge variant="default">Customer</Badge>
                     )}
                   </td>
+                  <td className="p-4 text-right">
+                    <div className="relative">
+                      <button
+                        onClick={() => setMenuOpen(menuOpen === customer.id ? null : customer.id)}
+                        className="p-2 hover:bg-gray-100 rounded"
+                      >
+                        <MoreVertical size={16} />
+                      </button>
+                      {menuOpen === customer.id && (
+                        <div className="absolute right-0 mt-1 w-48 bg-white border border-gray-200 shadow-lg z-10">
+                          <button
+                            onClick={() => {
+                              setSelectedUser(customer);
+                              setShowRoleModal(true);
+                              setMenuOpen(null);
+                            }}
+                            className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2"
+                          >
+                            <Shield size={14} />
+                            {customer.isAdmin ? 'Remove Admin' : 'Make Admin'}
+                          </button>
+                          <button
+                            onClick={() => {
+                              setSelectedUser(customer);
+                              setShowDeleteModal(true);
+                              setMenuOpen(null);
+                            }}
+                            className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2 text-red-600"
+                          >
+                            <Trash2 size={14} />
+                            Delete User
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && selectedUser && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white w-full max-w-md p-6">
+            <h3 className="text-lg font-bold mb-4">Delete User</h3>
+            <p className="text-gray-600 mb-6">
+              Are you sure you want to delete <strong>{selectedUser.name}</strong> ({selectedUser.email})? 
+              This action cannot be undone and will remove all their data.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setSelectedUser(null);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="bg-red-600 hover:bg-red-700 text-white"
+                onClick={() => deleteMutation.mutate(selectedUser.id)}
+                disabled={deleteMutation.isPending}
+              >
+                {deleteMutation.isPending ? 'Deleting...' : 'Delete User'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Change Role Modal */}
+      {showRoleModal && selectedUser && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white w-full max-w-md p-6">
+            <h3 className="text-lg font-bold mb-4">Change User Role</h3>
+            <p className="text-gray-600 mb-6">
+              {selectedUser.isAdmin ? (
+                <>Are you sure you want to remove admin privileges from <strong>{selectedUser.name}</strong>?</>
+              ) : (
+                <>Are you sure you want to make <strong>{selectedUser.name}</strong> an admin? They will have full access to the admin panel.</>
+              )}
+            </p>
+            <div className="flex gap-3 justify-end">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowRoleModal(false);
+                  setSelectedUser(null);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={() => updateRoleMutation.mutate({ 
+                  userId: selectedUser.id, 
+                  isAdmin: !selectedUser.isAdmin 
+                })}
+                disabled={updateRoleMutation.isPending}
+              >
+                {updateRoleMutation.isPending ? 'Updating...' : (selectedUser.isAdmin ? 'Remove Admin' : 'Make Admin')}
+              </Button>
+            </div>
+          </div>
         </div>
       )}
     </div>
