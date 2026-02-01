@@ -3,6 +3,7 @@ import { Request, Response } from 'express';
 import prisma from '../config/db';
 import { AuthRequest } from '../middleware/auth';
 import { validationResult } from 'express-validator';
+import { createNotification } from './notifications';
 
 // Get user's orders
 export const getUserOrders = async (req: AuthRequest, res: Response) => {
@@ -207,6 +208,19 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
     await prisma.cartItem.deleteMany({
       where: { userId }
     });
+
+    // Create notification for customer
+    try {
+      await createNotification(
+        userId,
+        'ORDER_PLACED',
+        'Order Confirmed!',
+        `Your order #${order.id.slice(0, 8)} has been placed successfully. Total: $${total.toFixed(2)}`,
+        { orderId: order.id, total }
+      );
+    } catch (notifError) {
+      console.error('Failed to create order notification:', notifError);
+    }
     
     res.status(201).json(order);
   } catch (error) {
@@ -262,6 +276,44 @@ export const updateOrderStatus = async (req: AuthRequest, res: Response) => {
         }
       }
     });
+
+    // Create notification for customer
+    const statusMessages: Record<string, { title: string; message: string; type: any }> = {
+      'PROCESSING': {
+        title: 'Order Being Processed',
+        message: `Your order #${id.slice(0, 8)} is now being processed.`,
+        type: 'ORDER_STATUS'
+      },
+      'SHIPPED': {
+        title: 'Order Shipped!',
+        message: `Great news! Your order #${id.slice(0, 8)} has been shipped.`,
+        type: 'ORDER_SHIPPED'
+      },
+      'DELIVERED': {
+        title: 'Order Delivered',
+        message: `Your order #${id.slice(0, 8)} has been delivered. Enjoy!`,
+        type: 'ORDER_DELIVERED'
+      },
+      'CANCELLED': {
+        title: 'Order Cancelled',
+        message: `Your order #${id.slice(0, 8)} has been cancelled.`,
+        type: 'ORDER_STATUS'
+      }
+    };
+
+    if (statusMessages[status]) {
+      try {
+        await createNotification(
+          existingOrder.userId,
+          statusMessages[status].type,
+          statusMessages[status].title,
+          statusMessages[status].message,
+          { orderId: id }
+        );
+      } catch (notifError) {
+        console.error('Failed to create notification:', notifError);
+      }
+    }
     
     res.json(order);
   } catch (error) {

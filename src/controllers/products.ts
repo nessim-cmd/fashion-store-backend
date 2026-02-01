@@ -24,7 +24,31 @@ export const getProducts = async (req: Request, res: Response) => {
     // Build filter object
     const filter: any = {};
     
-    if (category) filter.categoryId = category as string;
+    // Support both category ID and category name/slug
+    if (category) {
+      const categoryStr = category as string;
+      // Check if it's a UUID or a name/slug
+      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(categoryStr);
+      if (isUUID) {
+        filter.categoryId = categoryStr;
+      } else {
+        // First find the category by name or slug
+        const foundCategory = await prisma.category.findFirst({
+          where: {
+            OR: [
+              { name: { equals: categoryStr, mode: 'insensitive' } },
+              { slug: { equals: categoryStr.toLowerCase() } }
+            ]
+          }
+        });
+        if (foundCategory) {
+          filter.categoryId = foundCategory.id;
+        } else {
+          // No category found, return empty results
+          return res.json({ products: [], total: 0, page: 1, limit: Number(limit), totalPages: 0 });
+        }
+      }
+    }
     if (subcategory) filter.subcategoryId = subcategory as string;
     if (subSubcategory) filter.subSubcategoryId = subSubcategory as string;
     if (featured === 'true') filter.featured = true;
@@ -66,7 +90,8 @@ export const getProducts = async (req: Request, res: Response) => {
         subcategory: true,
         subSubcategory: true,
         productSizes: true,
-        productColors: true
+        productColors: true,
+        images: true
       }
     });
     
@@ -76,6 +101,7 @@ export const getProducts = async (req: Request, res: Response) => {
     // Format response
     const formattedProducts = products.map(product => ({
       ...product,
+      images: product.images.map(img => img.url),
       sizes: product.productSizes.map(ps => ps.size),
       colors: product.productColors.map(pc => ({
         name: pc.name,
@@ -104,7 +130,8 @@ export const getFeaturedProducts = async (req: Request, res: Response) => {
       include: {
         category: true,
         productSizes: true,
-        productColors: true
+        productColors: true,
+        images: true
       },
       take: 8
     });
@@ -112,6 +139,7 @@ export const getFeaturedProducts = async (req: Request, res: Response) => {
     // Format response
     const formattedProducts = products.map(product => ({
       ...product,
+      images: product.images.map(img => img.url),
       sizes: product.productSizes.map(ps => ps.size),
       colors: product.productColors.map(pc => ({
         name: pc.name,
@@ -138,7 +166,8 @@ export const getProductById = async (req: Request, res: Response) => {
         subcategory: true,
         subSubcategory: true,
         productSizes: true,
-        productColors: true
+        productColors: true,
+        images: true
       }
     });
     
@@ -149,6 +178,7 @@ export const getProductById = async (req: Request, res: Response) => {
     // Format response
     const formattedProduct = {
       ...product,
+      images: product.images.map(img => img.url),
       sizes: product.productSizes.map(ps => ps.size),
       colors: product.productColors.map(pc => ({
         name: pc.name,
@@ -175,7 +205,8 @@ export const getProductBySlug = async (req: Request, res: Response) => {
         subcategory: true,
         subSubcategory: true,
         productSizes: true,
-        productColors: true
+        productColors: true,
+        images: true
       }
     });
     
@@ -186,6 +217,7 @@ export const getProductBySlug = async (req: Request, res: Response) => {
     // Format response
     const formattedProduct = {
       ...product,
+      images: product.images.map(img => img.url),
       sizes: product.productSizes.map(ps => ps.size),
       colors: product.productColors.map(pc => ({
         name: pc.name,
@@ -232,7 +264,9 @@ export const createProduct = async (req: Request, res: Response) => {
         description,
         price: parseFloat(price),
         salePrice: salePrice ? parseFloat(salePrice) : null,
-        images,
+        images: {
+          create: (images as string[]).map(url => ({ url }))
+        },
         categoryId,
         subcategoryId,
         subSubcategoryId,
@@ -281,13 +315,15 @@ export const createProduct = async (req: Request, res: Response) => {
         subcategory: true,
         subSubcategory: true,
         productSizes: true,
-        productColors: true
+        productColors: true,
+        images: true
       }
     });
     
     // Format response
     const formattedProduct = {
       ...createdProduct,
+      images: createdProduct?.images.map(img => img.url) || [],
       sizes: createdProduct?.productSizes.map(ps => ps.size) || [],
       colors: createdProduct?.productColors.map(pc => ({
         name: pc.name,
@@ -345,7 +381,10 @@ export const updateProduct = async (req: Request, res: Response) => {
         description,
         price: parseFloat(price),
         salePrice: salePrice ? parseFloat(salePrice) : null,
-        images,
+        images: {
+          deleteMany: {},
+          create: (images as string[]).map(url => ({ url }))
+        },
         categoryId,
         subcategoryId,
         subSubcategoryId,
@@ -408,13 +447,15 @@ export const updateProduct = async (req: Request, res: Response) => {
         subcategory: true,
         subSubcategory: true,
         productSizes: true,
-        productColors: true
+        productColors: true,
+        images: true
       }
     });
     
     // Format response
     const formattedProduct = {
       ...updatedProduct,
+      images: updatedProduct?.images.map(img => img.url) || [],
       sizes: updatedProduct?.productSizes.map(ps => ps.size) || [],
       colors: updatedProduct?.productColors.map(pc => ({
         name: pc.name,

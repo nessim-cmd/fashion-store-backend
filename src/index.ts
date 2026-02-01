@@ -18,6 +18,13 @@ import bannerRoutes from './routes/banners';
 import specialOfferRoutes from './routes/specialOffers';
 import userRoutes from './routes/users';
 import attributeRoutes from './routes/attributes';
+import uploadRoutes from './routes/upload';
+import addressRoutes from './routes/addresses';
+import settingsRoutes from './routes/settings';
+import notificationRoutes from './routes/notifications';
+import newsletterRoutes from './routes/newsletter';
+import { initializeSettings } from './controllers/settings';
+import path from 'path';
 
 // Load environment variables
 dotenv.config();
@@ -26,15 +33,18 @@ dotenv.config();
 const app = express();
 
 // Middleware
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(morgan('dev'));
 
 // CORS configuration
 app.use(cors({
-  origin: env.CORS_ORIGIN,
+  origin: true, // Allow all origins (reflected) for development convenience
   credentials: true
 }));
+
+// Serve uploaded files
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -48,6 +58,14 @@ app.use('/api/banners', bannerRoutes);
 app.use('/api/special-offers', specialOfferRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/attributes', attributeRoutes);
+app.use('/api/upload', uploadRoutes);
+app.use('/api/addresses', addressRoutes);
+app.use('/api/settings', settingsRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/newsletter', newsletterRoutes);
+
+// Initialize default settings
+initializeSettings().catch(console.error);
 
 // Health check route
 app.get('/health', (req, res) => {

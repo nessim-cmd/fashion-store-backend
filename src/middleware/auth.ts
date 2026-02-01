@@ -55,3 +55,6 @@ export const authorizeAdmin = (
   }
   next();
 };
+
+// Alias for authorizeAdmin
+export const isAdmin = authorizeAdmin;

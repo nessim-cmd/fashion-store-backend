@@ -2,6 +2,27 @@
 import { Request, Response } from 'express';
 import prisma from '../config/db';
 import { validationResult } from 'express-validator';
+import { AuthRequest } from '../middleware/auth';
+
+// Get all coupons (admin only)
+export const getAllCoupons = async (req: AuthRequest, res: Response) => {
+  try {
+    const isAdmin = req.user?.isAdmin;
+    
+    if (!isAdmin) {
+      return res.status(403).json({ message: 'Admin access required' });
+    }
+
+    const coupons = await prisma.coupon.findMany({
+      orderBy: { createdAt: 'desc' }
+    });
+    
+    res.json(coupons);
+  } catch (error) {
+    console.error('Get all coupons error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
 
 // Get all active coupons
 export const getActiveCoupons = async (req: Request, res: Response) => {

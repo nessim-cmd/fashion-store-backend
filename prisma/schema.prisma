@@ -7,7 +7,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL" )
+  url      = env("DATABASE_URL")
 }
 
 model User {
@@ -21,6 +21,23 @@ model User {
   orders        Order[]
   wishlistItems WishlistItem[]
   cartItems     CartItem[]
+  addresses     Address[]
+}
+
+model Address {
+  id            String    @id @default(uuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name          String    // Full name for this address
+  phone         String
+  street        String
+  city          String
+  state         String
+  postalCode    String
+  country       String
+  isDefault     Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 }
 
 model Category {
@@ -65,7 +82,7 @@ model Product {
   description     String
   price           Float
   salePrice       Float?
-  images          String[]
+  images          ProductImage[]
   categoryId      String
   category        Category         @relation(fields: [categoryId], references: [id])
   subcategoryId   String?
@@ -74,6 +91,7 @@ model Product {
   subSubcategory  SubSubcategory?  @relation(fields: [subSubcategoryId], references: [id])
   featured        Boolean          @default(false)
   inStock         Boolean          @default(true)
+  stockQuantity   Int              @default(0)
   rating          Float            @default(0)
   reviewCount     Int              @default(0)
   slug            String           @unique
@@ -212,4 +230,73 @@ enum OrderStatus {
 enum CouponType {
   PERCENTAGE
   FIXED
+}
+
+model ProductImage {
+  id        String   @id @default(uuid())
+  url       String
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Site Settings (singleton-like, use key-value pairs)
+model Settings {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  value     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Notifications
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  type      NotificationType
+  title     String
+  message   String
+  data      String?  // JSON string for additional data like orderId
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+enum NotificationType {
+  ORDER_PLACED
+  ORDER_STATUS
+  ORDER_SHIPPED
+  ORDER_DELIVERED
+  NEWSLETTER
+  PROMO
+}
+
+// Newsletter subscribers
+model NewsletterSubscriber {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  userId       String?  // Optional link to user
+  isActive     Boolean  @default(true)
+  subscribedAt DateTime @default(now())
+  unsubscribedAt DateTime?
+}
+
+// Newsletter campaigns
+model Newsletter {
+  id        String   @id @default(uuid())
+  subject   String
+  content   String   // HTML content
+  status    NewsletterStatus @default(DRAFT)
+  sentAt    DateTime?
+  sentCount Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum NewsletterStatus {
+  DRAFT
+  SCHEDULED
+  SENDING
+  SENT
+  FAILED
 }
