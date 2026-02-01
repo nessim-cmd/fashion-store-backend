@@ -283,9 +283,9 @@ export const AdminProducts = () => {
         
         const base64 = await base64Promise;
         
-        // Upload to server
+        // Upload to server (Cloudinary returns full URL)
         const response = await api.post('/upload', { image: base64, filename: file.name });
-        const imageUrl = `http://localhost:5000${response.data.url}`;
+        const imageUrl = response.data.url;
         
         // Add to images list
         setFormData(prev => ({
