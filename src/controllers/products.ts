@@ -54,12 +54,43 @@ export const getProducts = async (req: Request, res: Response) => {
     if (featured === 'true') filter.featured = true;
     if (inStock === 'true') filter.inStock = true;
     
-    // Search by name or description
+    // Search by name or description - flexible matching
     if (search) {
-      filter.OR = [
-        { name: { contains: search as string, mode: 'insensitive' } },
-        { description: { contains: search as string, mode: 'insensitive' } }
+      const searchStr = (search as string).toLowerCase().trim();
+      
+      // Normalize search: remove separators and create variations
+      const normalized = searchStr.replace(/[-_\s]+/g, ''); // "t-shirt" or "t shirt" -> "tshirt"
+      
+      // Split search into words for partial matching
+      const words = searchStr.split(/[-_\s]+/).filter(w => w.length > 0);
+      
+      // Build search conditions
+      const searchConditions: any[] = [
+        // Exact contains match
+        { name: { contains: searchStr, mode: 'insensitive' } },
+        { description: { contains: searchStr, mode: 'insensitive' } },
       ];
+      
+      // Add normalized version (no separators)
+      if (normalized !== searchStr) {
+        searchConditions.push(
+          { name: { contains: normalized, mode: 'insensitive' } },
+          { description: { contains: normalized, mode: 'insensitive' } }
+        );
+      }
+      
+      // Add each word separately for partial matching
+      // e.g., searching "blue shirt" will match products with "shirt" in name
+      words.forEach(word => {
+        if (word.length >= 3) { // Only words with 3+ characters
+          searchConditions.push(
+            { name: { contains: word, mode: 'insensitive' } },
+            { description: { contains: word, mode: 'insensitive' } }
+          );
+        }
+      });
+      
+      filter.OR = searchConditions;
     }
     
     // Price range
