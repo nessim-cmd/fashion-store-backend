@@ -252,24 +252,36 @@ export const createProduct = async (req: Request, res: Response) => {
       subSubcategoryId,
       featured,
       inStock,
-      slug,
+      slug: providedSlug,
       sizes,
       colors
     } = req.body;
+    
+    // Generate unique slug
+    let slug = providedSlug || name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+    
+    // Check if slug exists and make it unique
+    const existingProduct = await prisma.product.findUnique({ where: { slug } });
+    if (existingProduct) {
+      slug = `${slug}-${Date.now()}`;
+    }
+    
+    // Ensure images is an array
+    const imageUrls = Array.isArray(images) ? images.filter((img: string) => img && img.trim()) : [];
     
     // Create product
     const product = await prisma.product.create({
       data: {
         name,
-        description,
-        price: parseFloat(price),
+        description: description || '',
+        price: parseFloat(price) || 0,
         salePrice: salePrice ? parseFloat(salePrice) : null,
-        images: {
-          create: (images as string[]).map(url => ({ url }))
-        },
+        images: imageUrls.length > 0 ? {
+          create: imageUrls.map((url: string) => ({ url }))
+        } : undefined,
         categoryId,
-        subcategoryId,
-        subSubcategoryId,
+        subcategoryId: subcategoryId || null,
+        subSubcategoryId: subSubcategoryId || null,
         featured: featured || false,
         inStock: inStock !== undefined ? inStock : true,
         rating: 0,
@@ -332,9 +344,13 @@ export const createProduct = async (req: Request, res: Response) => {
     };
     
     res.status(201).json(formattedProduct);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Create product error:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ 
+      message: 'Server error', 
+      error: error.message,
+      code: error.code 
+    });
   }
 };
 
