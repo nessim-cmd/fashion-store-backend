@@ -1,6 +1,5 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuthStore } from '../store/useAuthStore';
 import api from '../api/client';
 import { Button } from '../components/ui/Button';
 import toast from 'react-hot-toast';
@@ -11,7 +10,6 @@ export const Register = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const setAuth = useAuthStore((state) => state.setAuth);
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -31,10 +29,8 @@ export const Register = () => {
       console.log('Calling API...');
       const res = await api.post('/auth/register', { name, email, password });
       console.log('API response:', res.data);
-      setAuth(res.data.user, res.data.token);
-      localStorage.setItem('token', res.data.token);
-      toast.success('Welcome to Luxe!');
-      navigate('/');
+      toast.success('Account created! Please sign in.');
+      navigate('/login');
     } catch (error: any) {
       console.error('Register error:', error);
       toast.error(error.response?.data?.message || 'Registration failed');
