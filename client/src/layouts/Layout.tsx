@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Navbar } from '../components/Navbar';
 import { Toaster } from 'react-hot-toast';
+import { PWAInstallPrompt } from '../components/PWAInstallPrompt';
 import { Facebook, Instagram, Twitter, Youtube, CreditCard, Shield, Truck } from 'lucide-react';
 
 export const Layout = ({ children }: { children: React.ReactNode }) => {
@@ -11,6 +12,7 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
       <main className="flex-grow pt-20 w-full">
         {children}
       </main>
+      <PWAInstallPrompt />
       <footer className="bg-gray-950 text-white py-16 w-full mt-auto">
         <div className="w-full px-6 md:px-12 lg:px-24">
            {/* Features Bar */}

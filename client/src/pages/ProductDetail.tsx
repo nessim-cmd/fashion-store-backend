@@ -260,7 +260,36 @@ export const ProductDetail = () => {
               <button className="w-14 h-14 border border-gray-200 flex items-center justify-center hover:border-black transition-colors">
                 <Heart size={20} />
               </button>
-              <button className="w-14 h-14 border border-gray-200 flex items-center justify-center hover:border-black transition-colors">
+              <button 
+                onClick={async () => {
+                  const shareData = {
+                    title: product.name,
+                    text: product.description || `Check out ${product.name}!`,
+                    url: window.location.href,
+                  };
+                  
+                  try {
+                    if (navigator.share && navigator.canShare(shareData)) {
+                      await navigator.share(shareData);
+                    } else {
+                      // Fallback: copy to clipboard
+                      await navigator.clipboard.writeText(window.location.href);
+                      toast.success('Link copied to clipboard!');
+                    }
+                  } catch (err: any) {
+                    if (err.name !== 'AbortError') {
+                      // User didn't cancel, try clipboard fallback
+                      try {
+                        await navigator.clipboard.writeText(window.location.href);
+                        toast.success('Link copied to clipboard!');
+                      } catch {
+                        toast.error('Could not share');
+                      }
+                    }
+                  }
+                }}
+                className="w-14 h-14 border border-gray-200 flex items-center justify-center hover:border-black transition-colors"
+              >
                 <Share2 size={20} />
               </button>
             </div>
