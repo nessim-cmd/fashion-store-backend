@@ -82,7 +82,11 @@ export const Login = () => {
               </div>
            </div>
 
-           <Button className="w-full h-14 bg-black text-white hover:bg-gray-800 text-sm font-bold uppercase tracking-widest mt-4" disabled={isLoading}>
+           <Button 
+              type="submit"
+              className="w-full h-14 bg-black text-white hover:bg-gray-800 text-sm font-bold uppercase tracking-widest mt-4" 
+              disabled={isLoading}
+           >
               {isLoading ? 'Signing in...' : 'Sign In'}
            </Button>
         </form>

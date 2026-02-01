@@ -16,6 +16,8 @@ export const Register = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('Register form submitted', { name, email, password: '***' });
+    
     if (!name.trim() || !email.trim() || !password.trim()) {
       toast.error('Please fill in all fields');
       return;
@@ -26,12 +28,15 @@ export const Register = () => {
     }
     setIsLoading(true);
     try {
+      console.log('Calling API...');
       const res = await api.post('/auth/register', { name, email, password });
+      console.log('API response:', res.data);
       setAuth(res.data.user, res.data.token);
       localStorage.setItem('token', res.data.token);
       toast.success('Welcome to Luxe!');
       navigate('/');
     } catch (error: any) {
+      console.error('Register error:', error);
       toast.error(error.response?.data?.message || 'Registration failed');
     } finally {
       setIsLoading(false);
@@ -98,7 +103,11 @@ export const Register = () => {
               </div>
            </div>
 
-           <Button className="w-full h-14 bg-black text-white hover:bg-gray-800 text-sm font-bold uppercase tracking-widest mt-4" disabled={isLoading}>
+           <Button 
+              type="submit"
+              className="w-full h-14 bg-black text-white hover:bg-gray-800 text-sm font-bold uppercase tracking-widest mt-4" 
+              disabled={isLoading}
+           >
               {isLoading ? 'Creating Account...' : 'Sign Up'}
            </Button>
         </form>
