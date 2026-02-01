@@ -1,50 +1,46 @@
 // src/routes/upload.ts
 import express from 'express';
 import { authenticate } from '../middleware/auth';
-import fs from 'fs';
-import path from 'path';
+import { v2 as cloudinary } from 'cloudinary';
 
 const router = express.Router();
 
-// Ensure uploads directory exists
-const uploadsDir = path.join(process.cwd(), 'uploads');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-}
+// Configure Cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
 
-// Upload base64 image
+// Upload base64 image to Cloudinary
 router.post('/', authenticate, async (req, res) => {
   try {
-    const { image, filename } = req.body;
+    const { image } = req.body;
     
     if (!image) {
       return res.status(400).json({ message: 'No image provided' });
     }
 
-    // Extract base64 data
-    const matches = image.match(/^data:image\/([a-zA-Z+]+);base64,(.+)$/);
-    if (!matches) {
-      return res.status(400).json({ message: 'Invalid image format' });
+    // Check if Cloudinary is configured
+    if (!process.env.CLOUDINARY_CLOUD_NAME) {
+      return res.status(500).json({ message: 'Cloudinary not configured' });
     }
 
-    const ext = matches[1] === 'jpeg' ? 'jpg' : matches[1];
-    const base64Data = matches[2];
-    const buffer = Buffer.from(base64Data, 'base64');
+    // Upload to Cloudinary
+    const result = await cloudinary.uploader.upload(image, {
+      folder: 'fashion-store',
+      resource_type: 'image',
+      transformation: [
+        { width: 1200, height: 1200, crop: 'limit' },
+        { quality: 'auto' },
+        { fetch_format: 'auto' }
+      ]
+    });
     
-    // Generate unique filename
-    const uniqueName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${ext}`;
-    const filePath = path.join(uploadsDir, uniqueName);
-    
-    // Save file
-    fs.writeFileSync(filePath, buffer);
-    
-    // Return URL (in production, this would be a CDN URL)
-    const imageUrl = `/uploads/${uniqueName}`;
-    
-    res.json({ url: imageUrl, filename: uniqueName });
+    res.json({ url: result.secure_url, publicId: result.public_id });
   } catch (error) {
     console.error('Upload error:', error);
-    res.status(500).json({ message: 'Upload failed' });
+    res.status(500).json({ message: 'Upload failed', error: (error as Error).message });
   }
 });
 
