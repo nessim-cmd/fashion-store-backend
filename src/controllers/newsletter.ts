@@ -1,27 +1,70 @@
 import { Request, Response } from 'express';
 import prisma from '../config/db';
 import nodemailer from 'nodemailer';
-import Bull from 'bull';
 
-// Create email queue (uses Redis if available, falls back to in-memory)
-let emailQueue: Bull.Queue | null = null;
+// Lazy-loaded Bull queue (only if Redis is available)
+let emailQueue: any = null;
+let queueInitialized = false;
 
-try {
-  emailQueue = new Bull('email-queue', {
-    redis: process.env.REDIS_URL || 'redis://localhost:6379',
-    defaultJobOptions: {
-      attempts: 3,
-      backoff: {
-        type: 'exponential',
-        delay: 2000
-      },
-      removeOnComplete: true
-    }
-  });
-  console.log('Email queue connected to Redis');
-} catch (error) {
-  console.log('Redis not available, using direct email sending');
-}
+// Initialize queue lazily to avoid startup crashes
+const initializeQueue = async () => {
+  if (queueInitialized) return emailQueue;
+  queueInitialized = true;
+  
+  // Only try to use Bull if REDIS_URL is explicitly set
+  if (!process.env.REDIS_URL) {
+    console.log('REDIS_URL not set, using direct email sending');
+    return null;
+  }
+  
+  try {
+    const Bull = (await import('bull')).default;
+    emailQueue = new Bull('email-queue', {
+      redis: process.env.REDIS_URL,
+      defaultJobOptions: {
+        attempts: 3,
+        backoff: {
+          type: 'exponential',
+          delay: 2000
+        },
+        removeOnComplete: true
+      }
+    });
+    
+    // Test connection
+    await emailQueue.isReady();
+    console.log('Email queue connected to Redis');
+    
+    // Process email jobs
+    emailQueue.process(async (job: any) => {
+      const { to, subject, html } = job.data;
+      const transporter = createTransporter();
+      
+      await transporter.sendMail({
+        from: process.env.SMTP_FROM || '"Fashion Store" <noreply@fashionstore.com>',
+        to,
+        subject,
+        html
+      });
+      
+      return { sent: true, to };
+    });
+
+    emailQueue.on('completed', (job: any, result: any) => {
+      console.log(`Email sent to ${result.to}`);
+    });
+
+    emailQueue.on('failed', (job: any, err: any) => {
+      console.error(`Failed to send email:`, err.message);
+    });
+    
+    return emailQueue;
+  } catch (error) {
+    console.log('Redis not available, using direct email sending:', (error as Error).message);
+    emailQueue = null;
+    return null;
+  }
+};
 
 // Create nodemailer transporter
 const createTransporter = () => {
@@ -36,35 +79,12 @@ const createTransporter = () => {
   });
 };
 
-// Process email jobs
-if (emailQueue) {
-  emailQueue.process(async (job) => {
-    const { to, subject, html } = job.data;
-    const transporter = createTransporter();
-    
-    await transporter.sendMail({
-      from: process.env.SMTP_FROM || '"Fashion Store" <noreply@fashionstore.com>',
-      to,
-      subject,
-      html
-    });
-    
-    return { sent: true, to };
-  });
-
-  emailQueue.on('completed', (job, result) => {
-    console.log(`Email sent to ${result.to}`);
-  });
-
-  emailQueue.on('failed', (job, err) => {
-    console.error(`Failed to send email:`, err.message);
-  });
-}
-
 // Send email (with queue if available)
 export const sendEmail = async (to: string, subject: string, html: string) => {
-  if (emailQueue) {
-    await emailQueue.add({ to, subject, html });
+  const queue = await initializeQueue();
+  
+  if (queue) {
+    await queue.add({ to, subject, html });
   } else {
     // Direct send if no queue
     const transporter = createTransporter();
